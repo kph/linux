@@ -667,6 +667,7 @@
 					regulator-name = "vddpcie";
 					regulator-min-microvolt = <725000>;
 					regulator-max-microvolt = <1450000>;
+					regulator-always-on;
 					anatop-reg-offset = <0x140>;
 					anatop-vol-bit-shift = <9>;
 					anatop-vol-bit-width = <5>;
@@ -1103,7 +1104,7 @@
 				#address-cells = <1>;
 				#size-cells = <0>;
 				compatible = "fsl,imx6sx-qspi";
-				reg = <0x021e0000 0x4000>, <0x60000000 0x10000000>;
+				reg = <0x021e0000 0x4000>, <0x60000000 0x00004000>;
 				reg-names = "QuadSPI", "QuadSPI-memory";
 				interrupts = <GIC_SPI 107 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&clks IMX6SX_CLK_QSPI1>,
@@ -1116,7 +1117,7 @@
 				#address-cells = <1>;
 				#size-cells = <0>;
 				compatible = "fsl,imx6sx-qspi";
-				reg = <0x021e4000 0x4000>, <0x70000000 0x10000000>;
+				reg = <0x021e4000 0x4000>, <0x70000000 0x00004000>;
 				reg-names = "QuadSPI", "QuadSPI-memory";
 				interrupts = <GIC_SPI 109 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&clks IMX6SX_CLK_QSPI2>,

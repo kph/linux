@@ -1,0 +1,62 @@
+What:		/sys/bus/platform/drivers/onie/...
+Date:		May 2020
+KernelVersion:  TBD
+Contact:	Tom Grennan <tgrennan@platinasystems.com>
+Description:
+	The onie platform driver is an NVMEM consumer that provides these
+	interface files for the respective TLVs of an ONIE format NVMEM device
+	or cell:
+ 
+	    country_code    mac_base*         part_number    vendor
+	    crc*            manufacture_date  platform_name  vendor_extension*
+	    device_version* manufacturer      product_name
+	    diag_version    num_macs*         serial_number
+	    label_revision  onie_version      service_tag
+ 
+	See,
+	<https://opencomputeproject.github.io/onie/design-spec/hw_requirements.html>
+
+	Each file has formatted text values of the respective type.  With
+	except those marked, this is simple text with the trailing newline
+	trimmed on write.
+
+	    mac_base
+		A network link address in 00:01:02:03:04:05 format.
+
+	    num_macs
+		A decimal, unsigned integer representing the be16_to_cpu().
+
+	    device_version
+		A decimal, unsigned integer representing the 1-byte value.
+ 
+	    vendor_extension
+		A binary concatenation of all such TLVs.
+ 
+	    crc
+		A hexadecimal, unsigned integer in 0x%08x format representing
+		the be32_to_cpu() value.  A write to any other file only
+		updates the cached data but anything writen to crc results in
+		recalculation of the trailing CRC followed by NVMEM update.
+
+	A file read of a missing respective NVMEM TLV results in ENOMSG.  With
+	an unformatted NVMEM, all files return ENOMSG.
+
+	The ONIE platform device must be instantiated by the device tree or
+	ACPI. If such device is unavailable, the platform driver only provides
+	access to the initially blank cache. By default, the driver associates
+	with the nvmem cell named "onie-data". This may be overriden with the
+	"nvmem" module parameter.  A period (".") parameter results in the
+	driver by-passing NVMEM load. A "cell:CELL" prefaced parameter results
+	in the driver loading the trailling CELL instead of the default,
+	"onie-data". Anything else results in the driver loading the named
+	NVMEM device.
+
+	The driver also provides these files for NVMEM diagnostics.
+
+	    nvmem
+		The read-only name of the loaded cell or device.
+
+	    cache
+		A binary view of the cached data. A write updates the cache but
+		the above files will all return -ENOMSG unless the contents are
+		a valid ONIE format with a correct crc.
