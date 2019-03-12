@@ -885,6 +885,7 @@ static ssize_t fsl_qspi_read(struct spi_nor *nor, loff_t from,
 	struct fsl_qspi *q = nor->priv;
 	u8 cmd = nor->read_opcode;
 
+	printk("fsl_qspi_read(%px, %lx, %lx, %px)\n");
 	/* if necessary,ioremap buffer before AHB read, */
 	if (!q->ahb_addr) {
 		q->memmap_offs = q->chip_base_addr + from;
@@ -919,9 +920,10 @@ static ssize_t fsl_qspi_read(struct spi_nor *nor, loff_t from,
 		len);
 
 	/* Read out the data directly from the AHB buffer.*/
+	printk("about to memcpy from ahb\n");
 	memcpy(buf, q->ahb_addr + q->chip_base_addr + from - q->memmap_offs,
 		len);
-
+	printk("...fsl_qspi_read\n");
 	return len;
 }
 
@@ -982,6 +984,7 @@ static int fsl_qspi_probe(struct platform_device *pdev)
 	struct mtd_info *mtd;
 	int ret, i = 0;
 
+	printk("In fsl_qspi_probe!\n");
 	q = devm_kzalloc(dev, sizeof(*q), GFP_KERNEL);
 	if (!q)
 		return -ENOMEM;
@@ -1014,6 +1017,7 @@ static int fsl_qspi_probe(struct platform_device *pdev)
 	q->memmap_phy = res->start;
 
 	/* find the clocks */
+	printk("Enabling clocks\n");
 	q->clk_en = devm_clk_get(dev, "qspi_en");
 	if (IS_ERR(q->clk_en))
 		return PTR_ERR(q->clk_en);
@@ -1029,6 +1033,7 @@ static int fsl_qspi_probe(struct platform_device *pdev)
 	}
 
 	/* find the irq */
+	printk("Enabling IRQs\n");
 	ret = platform_get_irq(pdev, 0);
 	if (ret < 0) {
 		dev_err(dev, "failed to get the irq: %d\n", ret);
@@ -1042,6 +1047,7 @@ static int fsl_qspi_probe(struct platform_device *pdev)
 		goto irq_failed;
 	}
 
+	printk("NOR setup\n");
 	ret = fsl_qspi_nor_setup(q);
 	if (ret)
 		goto irq_failed;
@@ -1052,6 +1058,7 @@ static int fsl_qspi_probe(struct platform_device *pdev)
 	mutex_init(&q->lock);
 
 	/* iterate the subnodes. */
+	printk("Iterating over subnodes\n");
 	for_each_available_child_of_node(dev->of_node, np) {
 		/* skip the holes */
 		if (!q->has_second_chip)
@@ -1061,6 +1068,7 @@ static int fsl_qspi_probe(struct platform_device *pdev)
 		mtd = &nor->mtd;
 
 		nor->dev = dev;
+		printk("spi_nor_set_flash_node\n");
 		spi_nor_set_flash_node(nor, np);
 		nor->priv = q;
 
@@ -1083,6 +1091,7 @@ static int fsl_qspi_probe(struct platform_device *pdev)
 		}
 
 		/* fill the hooks */
+		printk("Filling in hooks\n");
 		nor->read_reg = fsl_qspi_read_reg;
 		nor->write_reg = fsl_qspi_write_reg;
 		nor->read = fsl_qspi_read;
@@ -1098,12 +1107,15 @@ static int fsl_qspi_probe(struct platform_device *pdev)
 			goto mutex_failed;
 
 		/* set the chip address for READID */
+		printk("set_base_addr\n");
 		fsl_qspi_set_base_addr(q, nor);
 
+		printk("spi_nor_scan\n");
 		ret = spi_nor_scan(nor, NULL, &hwcaps);
 		if (ret)
 			goto mutex_failed;
 
+		printk("mtd_device_register\n");
 		ret = mtd_device_register(mtd, NULL, 0);
 		if (ret)
 			goto mutex_failed;
@@ -1113,6 +1125,7 @@ static int fsl_qspi_probe(struct platform_device *pdev)
 			q->nor_size = mtd->size;
 
 			/* Map the SPI NOR to accessiable address */
+			printk("fsp_qspi_set_map_addr\n");
 			fsl_qspi_set_map_addr(q);
 		}
 
@@ -1129,14 +1142,19 @@ static int fsl_qspi_probe(struct platform_device *pdev)
 			nor->page_size = q->devtype_data->txfifo;
 
 		i++;
+		printk("looping, i=%d\n", i);
 	}
 
 	/* finish the rest init. */
+	printk("nor_setup_last\n");
 	ret = fsl_qspi_nor_setup_last(q);
 	if (ret)
 		goto last_init_failed;
 
+	printk("qsl_clk_disable_unprep\n");
 	fsl_qspi_clk_disable_unprep(q);
+
+	printk("Out fsp_qspi_probe\n");
 	return 0;
 
 last_init_failed:

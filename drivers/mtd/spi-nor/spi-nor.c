@@ -1891,8 +1891,10 @@ static int spi_nor_read_sfdp(struct spi_nor *nor, u32 addr,
 	nor->read_dummy = 8;
 
 	while (len) {
-		ret = nor->read(nor, addr, len, (u8 *)buf);
-		if (!ret || ret > len) {
+	  printk("nor->read[%pS](%px, %px, %d, %px)\n", nor->read, nor, addr, len, buf);
+	  ret = nor->read(nor, addr, len, (u8 *)buf);
+	  printk("...nor->read()\n");
+	  if (!ret || ret > len) {
 			ret = -EIO;
 			goto read_err;
 		}
@@ -1936,7 +1938,9 @@ static int spi_nor_read_sfdp_dma_unsafe(struct spi_nor *nor, u32 addr,
 	if (!dma_safe_buf)
 		return -ENOMEM;
 
+	printk("in spi_nor_read_sfdp()...\n");
 	ret = spi_nor_read_sfdp(nor, addr, len, dma_safe_buf);
+	printk("...out spi_nor_read_sfdp()\n");
 	memcpy(buf, dma_safe_buf, len);
 	kfree(dma_safe_buf);
 
@@ -2366,6 +2370,7 @@ static int spi_nor_parse_sfdp(struct spi_nor *nor,
 	int i, err;
 
 	/* Get the SFDP header. */
+	printk("calling spi_nor_read_sfdp_dma_unsafe\n");
 	err = spi_nor_read_sfdp_dma_unsafe(nor, 0, sizeof(header), &header);
 	if (err < 0)
 		return err;
@@ -2402,6 +2407,7 @@ static int spi_nor_parse_sfdp(struct spi_nor *nor,
 		if (!param_headers)
 			return -ENOMEM;
 
+		printk("spi_nor_read_sfdp\n");
 		err = spi_nor_read_sfdp(nor, sizeof(header),
 					psize, param_headers);
 		if (err < 0) {
@@ -2425,6 +2431,7 @@ static int spi_nor_parse_sfdp(struct spi_nor *nor,
 			bfpt_header = param_header;
 	}
 
+	printk("spi_nor_parse_bfpt\n");
 	err = spi_nor_parse_bfpt(nor, bfpt_header, params);
 	if (err)
 		goto exit;
@@ -2448,6 +2455,7 @@ static int spi_nor_parse_sfdp(struct spi_nor *nor,
 
 exit:
 	kfree(param_headers);
+	printk("Done spi_nor_parse_sfdp(), err=%d\n", err);
 	return err;
 }
 
@@ -2464,12 +2472,14 @@ static int spi_nor_init_params(struct spi_nor *nor,
 
 	/* (Fast) Read settings. */
 	params->hwcaps.mask |= SNOR_HWCAPS_READ;
+	printk("spi_nor_set_read_settings 1\n");
 	spi_nor_set_read_settings(&params->reads[SNOR_CMD_READ],
 				  0, 0, SPINOR_OP_READ,
 				  SNOR_PROTO_1_1_1);
 
 	if (!(info->flags & SPI_NOR_NO_FR)) {
 		params->hwcaps.mask |= SNOR_HWCAPS_READ_FAST;
+		printk("spi_nor_set_read_settings 2\n");
 		spi_nor_set_read_settings(&params->reads[SNOR_CMD_READ_FAST],
 					  0, 8, SPINOR_OP_READ_FAST,
 					  SNOR_PROTO_1_1_1);
@@ -2477,6 +2487,7 @@ static int spi_nor_init_params(struct spi_nor *nor,
 
 	if (info->flags & SPI_NOR_DUAL_READ) {
 		params->hwcaps.mask |= SNOR_HWCAPS_READ_1_1_2;
+		printk("spi_nor_set_read_settings 3\n");
 		spi_nor_set_read_settings(&params->reads[SNOR_CMD_READ_1_1_2],
 					  0, 8, SPINOR_OP_READ_1_1_2,
 					  SNOR_PROTO_1_1_2);
@@ -2484,6 +2495,7 @@ static int spi_nor_init_params(struct spi_nor *nor,
 
 	if (info->flags & SPI_NOR_QUAD_READ) {
 		params->hwcaps.mask |= SNOR_HWCAPS_READ_1_1_4;
+		printk("spi_nor_set_read_settings 4\n");
 		spi_nor_set_read_settings(&params->reads[SNOR_CMD_READ_1_1_4],
 					  0, 8, SPINOR_OP_READ_1_1_4,
 					  SNOR_PROTO_1_1_4);
@@ -2491,9 +2503,11 @@ static int spi_nor_init_params(struct spi_nor *nor,
 
 	/* Page Program settings. */
 	params->hwcaps.mask |= SNOR_HWCAPS_PP;
+	printk("spi_nor_set_pp_settings\n");
 	spi_nor_set_pp_settings(&params->page_programs[SNOR_CMD_PP],
 				SPINOR_OP_PP, SNOR_PROTO_1_1_1);
-
+	printk("done spi_nor_set_pp_settings\n");
+	
 	/* Select the procedure to set the Quad Enable bit. */
 	if (params->hwcaps.mask & (SNOR_HWCAPS_READ_QUAD |
 				   SNOR_HWCAPS_PP_QUAD)) {
@@ -2522,21 +2536,27 @@ static int spi_nor_init_params(struct spi_nor *nor,
 	}
 
 	/* Override the parameters with data read from SFDP tables. */
+	printk("override parameters\n");
 	nor->addr_width = 0;
 	nor->mtd.erasesize = 0;
 	if ((info->flags & (SPI_NOR_DUAL_READ | SPI_NOR_QUAD_READ)) &&
 	    !(info->flags & SPI_NOR_SKIP_SFDP)) {
 		struct spi_nor_flash_parameter sfdp_params;
-
+		printk("in memcpy 1...\n");
 		memcpy(&sfdp_params, params, sizeof(sfdp_params));
+		printk("In spi_nor_parse_sfdp\n");
 		if (spi_nor_parse_sfdp(nor, &sfdp_params)) {
-			nor->addr_width = 0;
+		  printk("...out spi_nor_parse_sfdp\n");
+		  nor->addr_width = 0;
 			nor->mtd.erasesize = 0;
 		} else {
-			memcpy(params, &sfdp_params, sizeof(*params));
+		  printk("in memcpy 2...\n");
+		  memcpy(params, &sfdp_params, sizeof(*params));
+		  printk("...out memcpy 2\n");
 		}
 	}
 
+	printk("done spi_nor_init_params\n");
 	return 0;
 }
 
@@ -2797,6 +2817,7 @@ int spi_nor_scan(struct spi_nor *nor, const char *name,
 	int ret;
 	int i;
 
+	printk("spi_nor_check\n");
 	ret = spi_nor_check(nor);
 	if (ret)
 		return ret;
@@ -2809,8 +2830,10 @@ int spi_nor_scan(struct spi_nor *nor, const char *name,
 	if (name)
 		info = spi_nor_match_id(name);
 	/* Try to auto-detect if chip name wasn't specified or not found */
-	if (!info)
-		info = spi_nor_read_id(nor);
+	if (!info) {
+	  printk("spi_nor_read_id\n");
+	  info = spi_nor_read_id(nor);
+	}
 	if (IS_ERR_OR_NULL(info))
 		return -ENOENT;
 
@@ -2849,6 +2872,7 @@ int spi_nor_scan(struct spi_nor *nor, const char *name,
 		nor->flags |=  SNOR_F_READY_XSR_RDY;
 
 	/* Parse the Serial Flash Discoverable Parameters table. */
+	printk("spi_nor_init_params\n");
 	ret = spi_nor_init_params(nor, info, &params);
 	if (ret)
 		return ret;
@@ -2922,6 +2946,7 @@ int spi_nor_scan(struct spi_nor *nor, const char *name,
 	 * - set the SPI protocols for register and memory accesses.
 	 * - set the Quad Enable bit if needed (required by SPI x-y-4 protos).
 	 */
+	printk("spi_nor_setup\n");
 	ret = spi_nor_setup(nor, info, &params, hwcaps);
 	if (ret)
 		return ret;
@@ -2947,7 +2972,8 @@ int spi_nor_scan(struct spi_nor *nor, const char *name,
 	}
 
 	if (info->flags & SPI_S3AN) {
-		ret = s3an_nor_scan(info, nor);
+	  printk("s3an_nor_scan\n");
+	  ret = s3an_nor_scan(info, nor);
 		if (ret)
 			return ret;
 	}
@@ -2977,6 +3003,7 @@ int spi_nor_scan(struct spi_nor *nor, const char *name,
 				mtd->eraseregions[i].erasesize,
 				mtd->eraseregions[i].erasesize / 1024,
 				mtd->eraseregions[i].numblocks);
+	printk("spi_nor_scan finished\n");
 	return 0;
 }
 EXPORT_SYMBOL_GPL(spi_nor_scan);
