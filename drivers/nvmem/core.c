@@ -704,31 +704,29 @@ static struct nvmem_device *nvmem_find(const char *name)
  * Return: ERR_PTR() on error or a valid pointer to a struct nvmem_device
  * on success.
  */
-struct nvmem_device *fwnode_nvmem_device_get(struct device *dev, const char *id)
+struct nvmem_device *fwnode_nvmem_device_get(struct fwnode_handle *fwnode, const char *id)
 {
 
 	struct fwnode_handle *nvmem_fwnode;
 	int index;
 
-	index = device_property_match_string(dev, "nvmem-names", id);
+	index = fwnode_property_match_string(fwnode, "nvmem-names", id);
 
-	if (dev_of_node(dev)) {
-		struct device_node *nvmem_np = of_parse_phandle(dev->of_node,
+	if (is_of_node(fwnode)) {
+		struct device_node *nvmem_np = of_parse_phandle(to_of_node(fwnode),
 								"nvmem", index);
 		if (!nvmem_np)
 			return ERR_PTR(-EINVAL);
 		nvmem_fwnode = &nvmem_np->fwnode;
-	} else if (is_acpi_device_node(dev->fwnode)) {
+	} else if (is_acpi_device_node(fwnode)) {
 		struct acpi_reference_args args;
-		int rval = acpi_node_get_property_reference(dev->fwnode,
+		int rval = acpi_node_get_property_reference(fwnode,
 							    "nvmem", index, &args);
 		if (rval) {
-			dev_err(dev, "could not find nvmem\n");
 			return ERR_PTR(rval);
 		}
 		nvmem_fwnode = acpi_fwnode_handle(args.adev);
 	} else {
-		dev_err(dev, "cannot read data from DT or ACPI\n");
 		return ERR_PTR(-ENXIO);
 	}
 
@@ -751,7 +749,7 @@ struct nvmem_device *nvmem_device_get(struct device *dev, const char *dev_name)
 	if (dev->fwnode) { /* try firmware tree first */
 		struct nvmem_device *nvmem;
 
-		nvmem = fwnode_nvmem_device_get(dev, dev_name);
+		nvmem = fwnode_nvmem_device_get(dev->fwnode, dev_name);
 
 		if (!IS_ERR(nvmem) || PTR_ERR(nvmem) == -EPROBE_DEFER)
 			return nvmem;
@@ -849,9 +847,9 @@ static struct nvmem_cell *nvmem_cell_get_from_list(const char *cell_id)
 }
 
 /**
- * dev_nvmem_cell_get() - Get a nvmem cell from given device node and cell id
+ * fwnode_nvmem_cell_get() - Get a nvmem cell from given firmwar node and cell id
  *
- * @np: Device tree node that uses the nvmem cell.
+ * @fwnode: Firmware node that uses the nvmem cell.
  * @name: nvmem cell name from nvmem-cell-names property, or NULL
  *	  for the cell at index 0 (the lone cell with no accompanying
  *	  nvmem-cell-names property).
@@ -860,7 +858,7 @@ static struct nvmem_cell *nvmem_cell_get_from_list(const char *cell_id)
  * to a struct nvmem_cell.  The nvmem_cell will be freed by the
  * nvmem_cell_put().
  */
-struct nvmem_cell *dev_nvmem_cell_get(struct device *dev,
+struct nvmem_cell *fwnode_nvmem_cell_get(struct fwnode_handle *fwnode,
 					    const char *name)
 {
 	const char *cell_name;
@@ -873,23 +871,22 @@ struct nvmem_cell *dev_nvmem_cell_get(struct device *dev,
 
 	/* if cell name exists, find index to the name */
 	if (name)
-		index = device_property_match_string(dev, "nvmem-cell-names", name);
+		index = fwnode_property_match_string(fwnode, "nvmem-cell-names", name);
 
-	if (dev_of_node(dev)) {
-		struct device_node *np = dev->of_node;
+	if (is_of_node(fwnode)) {
+		struct device_node *np = to_of_node(fwnode);
 		struct device_node *cell_np = of_parse_phandle(np, "nvmem-cells", index);
 		if (!cell_np)
 			return ERR_PTR(-EINVAL);
 		cell_fwnode = &cell_np->fwnode;
 		cell_name = cell_np->name;
-	} else if (is_acpi_device_node(dev->fwnode)) {
+	} else if (is_acpi_device_node(fwnode)) {
 		struct acpi_reference_args args;
 		struct acpi_device *adev;
 		
-		rval = acpi_node_get_property_reference(dev->fwnode,
+		rval = acpi_node_get_property_reference(fwnode,
 						       "nvmem-cells", index, &args);
 		if (rval) {
-			dev_err(dev, "could not find nvmem-cells\n");
 			return ERR_PTR(rval);
 		}
 		cell_fwnode = acpi_fwnode_handle(args.adev);
@@ -899,7 +896,6 @@ struct nvmem_cell *dev_nvmem_cell_get(struct device *dev,
 		}
 		cell_name = acpi_device_bid(adev);
 	} else {
-		dev_err(dev, "cannot read data from DT or ACPI\n");
 		return ERR_PTR(-ENXIO);
 	}
 
@@ -967,7 +963,7 @@ err_mem:
 
 	return ERR_PTR(rval);
 }
-EXPORT_SYMBOL_GPL(dev_nvmem_cell_get);
+EXPORT_SYMBOL_GPL(fwnode_nvmem_cell_get);
 
 /**
  * nvmem_cell_get() - Get nvmem cell of device form a given cell name
@@ -984,7 +980,7 @@ struct nvmem_cell *nvmem_cell_get(struct device *dev, const char *cell_id)
 	struct nvmem_cell *cell;
 
 	if (dev->fwnode) { /* try firmware tree first */
-		cell = dev_nvmem_cell_get(dev, cell_id);
+		cell = fwnode_nvmem_cell_get(dev->fwnode, cell_id);
 		if (!IS_ERR(cell) || PTR_ERR(cell) == -EPROBE_DEFER)
 			return cell;
 	}
