@@ -267,7 +267,7 @@ static struct bus_type nvmem_bus_type = {
 
 static int fwnode_nvmem_match(struct device *dev, void *fwnode)
 {
-	return dev->fwnode == fwnode;
+	return dev_fwnode(dev) == fwnode;
 }
 
 static struct nvmem_device *fwnode_nvmem_find(struct fwnode_handle *fwnode)
@@ -746,10 +746,11 @@ EXPORT_SYMBOL_GPL(fwnode_nvmem_device_get);
  */
 struct nvmem_device *nvmem_device_get(struct device *dev, const char *dev_name)
 {
-	if (dev->fwnode) { /* try firmware tree first */
+	struct fwnode_handle *fwnode = dev_fwnode(dev);
+	if (fwnode) { /* try firmware tree first */
 		struct nvmem_device *nvmem;
 
-		nvmem = fwnode_nvmem_device_get(dev->fwnode, dev_name);
+		nvmem = fwnode_nvmem_device_get(fwnode, dev_name);
 
 		if (!IS_ERR(nvmem) || PTR_ERR(nvmem) == -EPROBE_DEFER)
 			return nvmem;
@@ -929,9 +930,9 @@ struct nvmem_cell *fwnode_nvmem_cell_get(struct fwnode_handle *fwnode,
 
 	rval = fwnode_property_read_u32_array(cell_fwnode, "bits", vals, 2);
 	if (rval < 0) {
-		if (rval != -ENODATA) {
-			dev_err(&nvmem->dev, "nvmem: invalid bits on %pfw\n",
-				cell_fwnode);
+		if (rval != -EINVAL) {
+			dev_err(&nvmem->dev, "nvmem: invalid bits on %pfw - %d\n",
+				cell_fwnode, rval);
 			goto err_sanity;
 		}
 	} else {
@@ -978,9 +979,10 @@ EXPORT_SYMBOL_GPL(fwnode_nvmem_cell_get);
 struct nvmem_cell *nvmem_cell_get(struct device *dev, const char *cell_id)
 {
 	struct nvmem_cell *cell;
-
-	if (dev->fwnode) { /* try firmware tree first */
-		cell = fwnode_nvmem_cell_get(dev->fwnode, cell_id);
+	struct fwnode_handle *fwnode = dev_fwnode(dev);
+	
+	if (fwnode) { /* try firmware tree first */
+		cell = fwnode_nvmem_cell_get(fwnode, cell_id);
 		if (!IS_ERR(cell) || PTR_ERR(cell) == -EPROBE_DEFER)
 			return cell;
 	}
