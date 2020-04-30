@@ -267,9 +267,6 @@ static struct bus_type nvmem_bus_type = {
 
 static int fwnode_nvmem_match(struct device *dev, void *fwnode)
 {
-	printk("fwnode_nvmem_match %px(%s) %px(%s)\n", dev_fwnode(dev),
-	       acpi_device_bid(to_acpi_device_node(dev_fwnode(dev))),
-	       fwnode, acpi_device_bid(to_acpi_device_node(fwnode)));
 	return dev_fwnode(dev) == fwnode;
 }
 
@@ -876,7 +873,6 @@ struct nvmem_cell *fwnode_nvmem_cell_get(struct fwnode_handle *fwnode,
 	/* if cell name exists, find index to the name */
 	if (name) {
 		index = fwnode_property_match_string(fwnode, "nvmem-cell-names", name);
-		printk("fwnode_nvmem_cell_get: nvmem-cell-names %s index %d\n", name, index);
 		if (index < 0)
 			return ERR_PTR(index);
 	}
@@ -895,7 +891,6 @@ struct nvmem_cell *fwnode_nvmem_cell_get(struct fwnode_handle *fwnode,
 		
 		rval = acpi_node_get_property_reference(fwnode,
 						       "nvmem-cells", index, &args);
-		printk("fwnode_nvmem_cell_get: acpi_node_get_property_reference returns %d\n", rval);
 		if (rval) {
 			return ERR_PTR(rval);
 		}
@@ -910,22 +905,18 @@ struct nvmem_cell *fwnode_nvmem_cell_get(struct fwnode_handle *fwnode,
 
 	nvmem_fwnode = fwnode_get_next_parent(cell_fwnode);
 	if (!nvmem_fwnode) {
-		printk("fwnode_get_next_parent returns null\n");
 		return ERR_PTR(-EINVAL);
 	}
-	printk("nvmem_fwnode is %s\n", acpi_device_bid(to_acpi_device_node(nvmem_fwnode)));
 	
 	nvmem = __nvmem_device_get(nvmem_fwnode, NULL, NULL);
 	//nvmem = __nvmem_device_get(cell_fwnode, NULL, NULL);
 	fwnode_handle_put(nvmem_fwnode);
 	if (IS_ERR(nvmem)) {
-		printk("__nvmem_device_get returns %ld\n", PTR_ERR(nvmem));
 		return ERR_CAST(nvmem);
 	}
 	
 	rval = fwnode_property_read_u32_array(cell_fwnode, "reg", vals, 2);
 	if (rval < 0) {
-		printk("fwnode_property_read_u32_array returns %d\n", rval);
 		dev_err(&nvmem->dev, "nvmem: invalid reg on %pfw\n",
 			cell_fwnode);
 		rval  = -EINVAL;
