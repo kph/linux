@@ -33,6 +33,7 @@
 #include <linux/hwmon.h>
 #include <linux/hwmon-sysfs.h>
 #include <linux/err.h>
+#include <linux/of_device.h>
 #include <linux/mutex.h>
 #include <linux/jiffies.h>
 #include <linux/util_macros.h>
@@ -2265,9 +2266,18 @@ static const struct i2c_device_id w83795_id[] = {
 };
 MODULE_DEVICE_TABLE(i2c, w83795_id);
 
+static const struct of_device_id w83795_of_match[] = {
+	{
+		.compatible = "nuvoton,w83795"
+	},
+	{ },
+};
+MODULE_DEVICE_TABLE(of, w83795_of_match);
+
 static struct i2c_driver w83795_driver = {
 	.driver = {
 		   .name = "w83795",
+		   .of_match_table = of_match_ptr(w83795_of_match),
 	},
 	.probe		= w83795_probe,
 	.remove		= w83795_remove,
