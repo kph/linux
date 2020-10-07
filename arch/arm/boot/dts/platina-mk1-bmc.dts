@@ -448,7 +448,7 @@
 			ledgpio: pca9535@75 {
 				compatible = "nxp,pca9535";
 				reg = <0x75>; // 22 on alpha hardware
-				reset-gpios = <&gpio6 0 GPIO_ACTIVE_LOW>;
+				reset-gpios = <&gpio6 6 GPIO_ACTIVE_LOW>;
 			};
 		};
 
