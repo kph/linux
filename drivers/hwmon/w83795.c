@@ -2165,7 +2165,7 @@ static int w83795_probe(struct i2c_client *client,
 	if (id) {
 		data->chip_type = id->driver_data;
 	} else {
-		data->chip_type = of_device_get_match_data(dev->driver->of_match_table, dev);
+		data->chip_type = of_device_get_match_data(dev);
 	}
 	data->bank = i2c_smbus_read_byte_data(client, W83795_REG_BANKSEL);
 	mutex_init(&data->update_lock);
@@ -2271,9 +2271,8 @@ static const struct i2c_device_id w83795_id[] = {
 MODULE_DEVICE_TABLE(i2c, w83795_id);
 
 static const struct of_device_id w83795_of_match[] = {
-	{ .compatible = "nuvoton,w83795g", .data = w83795g, },
-	{ .compatible = "nuvoton,w83795adg", .data = w83795adg, },
-	},
+	{ .compatible = "nuvoton,w83795g", .data = (void *)w83795g, },
+	{ .compatible = "nuvoton,w83795adg", .data = (void *)w83795adg, },
 	{ },
 };
 MODULE_DEVICE_TABLE(of, w83795_of_match);
