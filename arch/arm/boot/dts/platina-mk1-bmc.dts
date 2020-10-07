@@ -468,7 +468,7 @@
 			reg = <7>;
 
 			fanctrl: w83795@2f {
-				compatible = "nuvoton,w83795";
+				compatible = "nuvoton,w83795g";
 				reg = <0x2f>;
 			};
 		};
