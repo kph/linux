@@ -481,6 +481,24 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_i2c2>;
 	status = "okay";
+
+	psufanmux: i2cmux@72 {
+		compatible = "nxp,pca9545";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg = <0x72>;
+
+		i2c@2 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <2>;
+
+			psufanpio: pca9535@20 {
+				compatible = "nxp,pca9535";
+				reg = <0x20>;
+			};
+		};
+	};
 };
 
 &i2c3 {
