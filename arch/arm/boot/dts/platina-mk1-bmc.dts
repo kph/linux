@@ -448,6 +448,7 @@
 			ledgpio: pca9535@75 {
 				compatible = "nxp,pca9535";
 				reg = <0x75>; // 22 on alpha hardware
+				reset-gpios = <&gpio6 0 GPIO_ACTIVE_LOW>;
 			};
 		};
 
@@ -675,7 +676,7 @@
 &gpio6 {
 	SYSTEM_LED_RST_L@6 {
 		gpio-pin-desc;
-		output-high;
+		output-low;
 	};
 	HOST_TO_BMC_I2C_GPIO@7 {
 		gpio-pin-desc;
