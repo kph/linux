@@ -2165,7 +2165,7 @@ static int w83795_probe(struct i2c_client *client,
 	if (id) {
 		data->chip_type = id->driver_data;
 	} else {
-		data->chip_type = of_device_get_match_data(dev);
+		data->chip_type = (enum chip_types)of_device_get_match_data(dev);
 	}
 	data->bank = i2c_smbus_read_byte_data(client, W83795_REG_BANKSEL);
 	mutex_init(&data->update_lock);
