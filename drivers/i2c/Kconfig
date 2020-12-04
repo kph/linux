@@ -119,6 +119,12 @@ if I2C_SLAVE
 config I2C_SLAVE_EEPROM
 	tristate "I2C eeprom slave driver"
 
+config I2C_SLAVE_STREAM
+        tristate "I2C stream slave driver"
+	help
+	  Say Y here if you want a slave driver which will implement
+	  a bidirectional stream protocol over the I2C bus.
+
 endif
 
 config I2C_DEBUG_CORE
