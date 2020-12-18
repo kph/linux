@@ -701,8 +701,6 @@ static irqreturn_t i2c_imx_slave_isr(struct imx_i2c_struct *i2c_imx,
 {
 	u8 value;
 
-	printk("%s: status = %x ctl = %x \n", __func__, status, ctl);
-
 	if (status & I2SR_IAL) { /* Arbitration lost */
 		i2c_imx_clear_irq(i2c_imx, I2SR_IAL);
 		if (!(status & I2SR_IAAS))
