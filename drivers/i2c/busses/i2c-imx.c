@@ -670,7 +670,8 @@ static void i2c_imx_slave_event(struct imx_i2c_struct *i2c_imx,
 	i2c_imx->last_slave_event = event;
 }
 
-static void i2c_imx_slave_finish_op(struct imx_i2c_struct *i2c_imx) {
+static void i2c_imx_slave_finish_op(struct imx_i2c_struct *i2c_imx)
+{
 	u8 val;
 
 	while (i2c_imx->last_slave_event != I2C_SLAVE_STOP) {
@@ -679,12 +680,8 @@ static void i2c_imx_slave_finish_op(struct imx_i2c_struct *i2c_imx) {
 			i2c_imx_slave_event(i2c_imx, I2C_SLAVE_READ_PROCESSED,
 					    &val);
 			break;
-			
-		case I2C_SLAVE_WRITE_REQUESTED:
-			i2c_imx_slave_event(i2c_imx, I2C_SLAVE_STOP,
-					    &val);
-			break;
 
+		case I2C_SLAVE_WRITE_REQUESTED:
 		case I2C_SLAVE_READ_PROCESSED:
 		case I2C_SLAVE_WRITE_RECEIVED:
 			i2c_imx_slave_event(i2c_imx, I2C_SLAVE_STOP, &val);
@@ -789,7 +786,7 @@ static int i2c_imx_reg_slave(struct i2c_client *client)
 
 	i2c_imx->slave = client;
 	i2c_imx->last_slave_event = I2C_SLAVE_STOP;
-	
+
 	/* Resume */
 	ret = pm_runtime_get_sync(i2c_imx->adapter.dev.parent);
 	if (ret < 0) {
