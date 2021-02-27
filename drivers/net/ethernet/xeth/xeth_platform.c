@@ -37,25 +37,6 @@ static const struct xeth_variant xeth_variant_platina_mk1alpha = {
 	.base_port = 0,
 };
 
-static const struct xeth_variant * const xeth_variants[] = {
-	[xeth_platform_dd_platina_mk1] = &xeth_variant_platina_mk1,
-	[xeth_platform_dd_platina_mk1alpha] = &xeth_variant_platina_mk1alpha,
-};
-
-static const struct platform_device_id xeth_platform_device_ids[] = {
-	{
-		.name = "platina-mk1",
-		.driver_data = xeth_platform_dd_platina_mk1,
-	},
-	{
-		.name = "platina-mk1alpha",
-		.driver_data = xeth_platform_dd_platina_mk1alpha,
-	},
-	{},
-};
-
-MODULE_DEVICE_TABLE(platform, xeth_platform_device_ids);
-
 static const struct of_device_id xeth_platform_of_match[] = {
 	{
 		.compatible = "platina,mk1",
@@ -128,14 +109,6 @@ static int __xeth_platform_probe(struct platform_device *pd)
 		       variant, &xeth_variant_platina_mk1,
 		       &xeth_variant_platina_mk1alpha);
 		//variant = NULL;
-	}
-
-	if (!variant && pd->id_entry) {
-		variant = xeth_variants[pd->id_entry->driver_data];
-		printk(KERN_EMERG "%s: %s pd->id_entry %ld variant %px platform_mk1 %px alpha %px\n",
-		       __func__, pd->name, pd->id_entry->driver_data, variant,
-		       &xeth_variant_platina_mk1,
-		       &xeth_variant_platina_mk1alpha);
 	}
 
 	if (!variant) {
@@ -225,5 +198,4 @@ struct platform_driver xeth_platform_driver = {
 	},
 	.probe		= xeth_platform_probe,
 	.remove		= xeth_platform_remove,
-	.id_table	= xeth_platform_device_ids,
 };
