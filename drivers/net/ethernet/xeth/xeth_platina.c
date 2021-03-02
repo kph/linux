@@ -29,13 +29,14 @@ static struct xeth_platina_mk1 {
 	struct i2c_client **qsfps;
 	struct xeth_port_et_stat st;
 	u64 eth1_addr;
+	u32 base_port;
 } xeth_platina_mk1 = {
 	.st = {
 		.max = 512,
 	},
 };
 
-static int xeth_platina_mk1_init(struct platform_device *pd)
+static int xeth_platina_mk1_init(struct platform_device *pd, u32 base_port)
 {
 	static const char * const eth1_akas[] = {
 		"eth1", "enp3s0f0", NULL
@@ -64,6 +65,8 @@ static int xeth_platina_mk1_init(struct platform_device *pd)
 			return -ENOMEM;
 		}
 	}
+
+	xeth_platina_mk1.base_port = base_port;
 
 	for (link = 0; link_akas[link]; link++) {
 		if (xeth_platina_mk1.links[link])
@@ -114,19 +117,12 @@ static void xeth_platina_mk1_ifname(char *ifname, int port, int subport)
 	if (port < 0)
 		strcpy(ifname, "platina-mk1");
 	else if (subport < 0)
-		scnprintf(ifname, IFNAMSIZ, "xeth%d", 1 + port);
+		scnprintf(ifname, IFNAMSIZ, "xeth%d",
+			  xeth_platina_mk1.base_port + port);
 	else
-		scnprintf(ifname, IFNAMSIZ, "xeth%d-%d", 1 + port, 1 + subport);
-}
-
-static void xeth_platina_mk1alpha_ifname(char *ifname, int port, int subport)
-{
-	if (port < 0)
-		strcpy(ifname, "platina-mk1");
-	else if (subport < 0)
-		scnprintf(ifname, IFNAMSIZ, "xeth%d", port);
-	else
-		scnprintf(ifname, IFNAMSIZ, "xeth%d-%d", port, subport);
+		scnprintf(ifname, IFNAMSIZ, "xeth%d-%d",
+			  xeth_platina_mk1.base_port + port,
+			  xeth_platina_mk1.base_port + subport);
 }
 
 /**
@@ -344,21 +340,6 @@ const struct xeth_platform xeth_platina_mk1_platform = {
 	.port_et_stats = xeth_platina_mk1_port_et_stats,
 	.port_et_stat_named = xeth_platina_mk1_port_et_stat_named,
 	.port_et_stat_names = xeth_platina_mk1_port_et_stat_names,
-	.encap = XETH_ENCAP_VLAN,
-	.ports = xeth_platina_mk1_ports,
-};
-
-const struct xeth_platform xeth_platina_mk1alpha_platform = {
-	.links = xeth_platina_mk1.links,
-	.port_et_priv_flag_names = xeth_platina_mk1_port_et_priv_flag_names,
-	.init = xeth_platina_mk1_init,
-	.uninit = xeth_platina_mk1_uninit,
-	.ifname = xeth_platina_mk1alpha_ifname,
-	.hw_addr = xeth_platina_mk1_hw_addr,
-	.xid = xeth_platina_mk1_xid,
-	.qsfp =xeth_platina_mk1_qsfp,
-	.port_ksettings = xeth_platina_mk1_port_ksettings,
-	.subport_ksettings = xeth_platina_mk1_subport_ksettings,
 	.encap = XETH_ENCAP_VLAN,
 	.ports = xeth_platina_mk1_ports,
 };

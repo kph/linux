@@ -13,7 +13,9 @@
 #include "xeth_qsfp.h"
 #include <linux/module.h>
 #include <linux/mod_devicetable.h>
-#include <linux/of_device.h>
+//#include <linux/property.h>
+//#include <linux/of_device.h>
+#include <linux/acpi.h>
 
 /* Driver Data indices */
 enum xeth_platform_dd {
@@ -22,35 +24,27 @@ enum xeth_platform_dd {
 };
 
 extern struct xeth_platform xeth_platina_mk1_platform;
-extern struct xeth_platform xeth_platina_mk1alpha_platform;
 
-static const struct xeth_platform * const xeth_platforms[] = {
-	[xeth_platform_dd_platina_mk1] = &xeth_platina_mk1_platform,
-	[xeth_platform_dd_platina_mk1alpha] = &xeth_platina_mk1alpha_platform,
+struct xeth_variant {
+	u32 base_port;
 };
 
-static const struct platform_device_id xeth_platform_device_ids[] = {
-	{
-		.name = "platina-mk1",
-		.driver_data = xeth_platform_dd_platina_mk1,
-	},
-	{
-		.name = "platina-mk1alpha",
-		.driver_data = xeth_platform_dd_platina_mk1alpha,
-	},
-	{},
+static const struct xeth_variant xeth_variant_platina_mk1 = {
+	.base_port = 1,
 };
 
-MODULE_DEVICE_TABLE(platform, xeth_platform_device_ids);
+static const struct xeth_variant xeth_variant_platina_mk1alpha = {
+	.base_port = 0,
+};
 
 static const struct of_device_id xeth_platform_of_match[] = {
 	{
-		.compatible = "linux,platina-mk1",
-		.data = &xeth_platina_mk1_platform,
+		.compatible = "platina,mk1",
+		.data = &xeth_variant_platina_mk1,
 	},
 	{
-		.compatible = "linux,platina-mk1alpha",
-		.data = &xeth_platina_mk1alpha_platform,
+		.compatible = "platina,mk1alpha",
+		.data = &xeth_variant_platina_mk1alpha,
 	},
 	{},
 };
@@ -88,40 +82,65 @@ static struct device_attribute xeth_platform_provision_attr = {
 	.show = xeth_platform_show_port_provision,
 };
 
-static int xeth_platform_probe(struct platform_device *pd)
+static int __xeth_platform_probe(struct platform_device *pd)
 {
-	const struct xeth_platform *platform;
+	const struct xeth_variant *variant;
 	struct net_device *mux;
 	int err, port, subport;
+	u32 base_port;
 
-	platform = of_device_get_match_data(&pd->dev);
-	if (!platform && pd->id_entry)
-		platform = xeth_platforms[pd->id_entry->driver_data];
-	if (!platform) {
-		pr_err("%s: no match\n", pd->name);
+	variant = device_get_match_data(&pd->dev);
+
+	printk(KERN_EMERG "%s: pd=%px init_name=%s\n",
+	       __func__, pd, pd->dev.init_name);
+
+//	platform = of_device_get_match_data(&pd->dev);
+	if (device_property_match_string(&pd->dev, "compatible", "platina,mk1")) {
+		printk(KERN_EMERG "%s: pd->name %s is compatible\n", __func__,
+		       pd->name);
+	} else {
+		printk(KERN_EMERG "%s: pd->name %s is not compatible\n", __func__,
+		       pd->name);
 		return -EINVAL;
+	}
+	if (variant) {
+		printk(KERN_EMERG "%s: %s variant %px platform_mk1 %px alpha %px\n",
+		       __func__, pd->name,
+		       variant, &xeth_variant_platina_mk1,
+		       &xeth_variant_platina_mk1alpha);
+		//variant = NULL;
+	}
+
+	if (!variant) {
+		pr_err("%s: no match %s\n", __func__, pd->name);
+		return -EINVAL;
+	}
+
+	if (device_property_read_u32(&pd->dev, "base-port", &base_port)) {
+		base_port = variant->base_port;
 	}
 
 	err = device_create_file(&pd->dev, &xeth_platform_provision_attr);
 	if (err)
 		return err;
 
-	err = xeth_platform_init(platform, pd);
+	err = xeth_platform_init(&xeth_platina_mk1_platform, pd, base_port);
 	if (err) {
 		device_remove_file(&pd->dev, &xeth_platform_provision_attr);
 		return err;
 	}
 
-	mux = xeth_mux(platform);
+	mux = xeth_mux(&xeth_platina_mk1_platform);
 	if (IS_ERR(mux)) {
-		xeth_platform_uninit(platform);
+		xeth_platform_uninit(&xeth_platina_mk1_platform);
 		device_remove_file(&pd->dev, &xeth_platform_provision_attr);
 		return PTR_ERR(mux);
 	}
 
 	platform_set_drvdata(pd, mux);
 
-	for (port = 0; port < xeth_platform_ports(platform); port++)
+	for (port = 0; port < xeth_platform_ports(&xeth_platina_mk1_platform);
+	     port++)
 		switch (xeth_platform_provision[port]) {
 		case 1:
 			xeth_port(mux, port, -1);
@@ -139,6 +158,15 @@ static int xeth_platform_probe(struct platform_device *pd)
 		}
 
 	return 0;
+}
+
+static int xeth_platform_probe(struct platform_device *pd) {
+	int err;
+
+	err = __xeth_platform_probe(pd);
+	printk(KERN_EMERG"%s: pd=%px pd->name=%s err=%d\n", __func__,
+	       pd, pd->name, err);
+	return err;
 }
 
 static int xeth_platform_remove(struct platform_device *pd)
@@ -170,5 +198,4 @@ struct platform_driver xeth_platform_driver = {
 	},
 	.probe		= xeth_platform_probe,
 	.remove		= xeth_platform_remove,
-	.id_table	= xeth_platform_device_ids,
 };
