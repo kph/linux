@@ -13,44 +13,16 @@
 #include "xeth_qsfp.h"
 #include <linux/module.h>
 #include <linux/mod_devicetable.h>
-#include <linux/of_device.h>
-
-/* Driver Data indices */
-enum xeth_platform_dd {
-	xeth_platform_dd_platina_mk1,
-	xeth_platform_dd_platina_mk1alpha,
-};
+#include <linux/property.h>
+#include <linux/acpi.h>
+#include <../drivers/gpio/gpiolib.h>
+#include <linux/gpio/consumer.h>
 
 extern struct xeth_platform xeth_platina_mk1_platform;
-extern struct xeth_platform xeth_platina_mk1alpha_platform;
-
-static const struct xeth_platform * const xeth_platforms[] = {
-	[xeth_platform_dd_platina_mk1] = &xeth_platina_mk1_platform,
-	[xeth_platform_dd_platina_mk1alpha] = &xeth_platina_mk1alpha_platform,
-};
-
-static const struct platform_device_id xeth_platform_device_ids[] = {
-	{
-		.name = "platina-mk1",
-		.driver_data = xeth_platform_dd_platina_mk1,
-	},
-	{
-		.name = "platina-mk1alpha",
-		.driver_data = xeth_platform_dd_platina_mk1alpha,
-	},
-	{},
-};
-
-MODULE_DEVICE_TABLE(platform, xeth_platform_device_ids);
 
 static const struct of_device_id xeth_platform_of_match[] = {
 	{
-		.compatible = "linux,platina-mk1",
-		.data = &xeth_platina_mk1_platform,
-	},
-	{
-		.compatible = "linux,platina-mk1alpha",
-		.data = &xeth_platina_mk1alpha_platform,
+		.compatible = "platina,mk1",
 	},
 	{},
 };
@@ -88,40 +60,78 @@ static struct device_attribute xeth_platform_provision_attr = {
 	.show = xeth_platform_show_port_provision,
 };
 
+static void gpiod_debug(const char *label, struct gpio_descs *descs)
+{
+	int i;
+	struct gpio_desc *desc;
+
+	for (i = 0; i < descs->ndescs; i++) {
+		desc = descs->desc[i];
+		printk(KERN_EMERG "%s: desc label=%s index %d name=%s id %d",
+		       __func__, desc->label, i, desc->name, desc_to_gpio(desc));
+	}
+}
+
 static int xeth_platform_probe(struct platform_device *pd)
 {
-	const struct xeth_platform *platform;
 	struct net_device *mux;
 	int err, port, subport;
+	u32 base_port = 1;
+	struct gpio_descs *absent_gpios, *int_gpios, *lpmode_gpios, *reset_gpios;
+	
+	err = device_property_read_u32(&pd->dev, "base-port", &base_port);
+	if (err < 0)
+		return err;
 
-	platform = of_device_get_match_data(&pd->dev);
-	if (!platform && pd->id_entry)
-		platform = xeth_platforms[pd->id_entry->driver_data];
-	if (!platform) {
-		pr_err("%s: no match\n", pd->name);
-		return -EINVAL;
+	absent_gpios = gpiod_get_array(&pd->dev, "absent", 0);
+	if (IS_ERR(absent_gpios)) {
+		err = PTR_ERR(absent_gpios);
+		goto out_absent;
+	}
+
+	int_gpios = gpiod_get_array(&pd->dev, "int", 0);
+	if (IS_ERR(int_gpios)) {
+		err = PTR_ERR(int_gpios);
+		goto out_int;
+	}
+	
+	lpmode_gpios = gpiod_get_array(&pd->dev, "lpmode", 0);
+	if (IS_ERR(lpmode_gpios)) {
+		err = PTR_ERR(lpmode_gpios);
+		goto out_lpmode;
+	}
+	
+	reset_gpios = gpiod_get_array(&pd->dev, "reset", 0);
+	if (IS_ERR(reset_gpios)) {
+		err = PTR_ERR(reset_gpios);
+		goto out_reset;
+	}
+
+	err = xeth_platform_init(&xeth_platina_mk1_platform, pd, base_port);
+	if (err) {
+		goto out_platform_init;
+	}
+
+	mux = xeth_mux(&xeth_platina_mk1_platform);
+	if (IS_ERR(mux)) {
+		err = PTR_ERR(mux);
+		goto out_mux;
 	}
 
 	err = device_create_file(&pd->dev, &xeth_platform_provision_attr);
-	if (err)
-		return err;
-
-	err = xeth_platform_init(platform, pd);
 	if (err) {
-		device_remove_file(&pd->dev, &xeth_platform_provision_attr);
-		return err;
+		goto out_device_create_file;
 	}
-
-	mux = xeth_mux(platform);
-	if (IS_ERR(mux)) {
-		xeth_platform_uninit(platform);
-		device_remove_file(&pd->dev, &xeth_platform_provision_attr);
-		return PTR_ERR(mux);
-	}
+	
+	gpiod_debug("absent", absent_gpios);
+	gpiod_debug("int", int_gpios);
+	gpiod_debug("lpmode", lpmode_gpios);
+	gpiod_debug("reset", reset_gpios);
 
 	platform_set_drvdata(pd, mux);
 
-	for (port = 0; port < xeth_platform_ports(platform); port++)
+	for (port = 0; port < xeth_platform_ports(&xeth_platina_mk1_platform);
+	     port++)
 		switch (xeth_platform_provision[port]) {
 		case 1:
 			xeth_port(mux, port, -1);
@@ -139,6 +149,21 @@ static int xeth_platform_probe(struct platform_device *pd)
 		}
 
 	return 0;
+
+out_device_create_file:
+	xeth_mux_uninit(mux);
+out_mux:
+	xeth_platform_uninit(&xeth_platina_mk1_platform);
+out_platform_init:
+	gpiod_put_array(reset_gpios);
+out_reset:
+	gpiod_put_array(lpmode_gpios);
+out_lpmode:
+	gpiod_put_array(int_gpios);
+out_int:
+	gpiod_put_array(absent_gpios);
+out_absent:
+	return err;
 }
 
 static int xeth_platform_remove(struct platform_device *pd)
@@ -170,5 +195,4 @@ struct platform_driver xeth_platform_driver = {
 	},
 	.probe		= xeth_platform_probe,
 	.remove		= xeth_platform_remove,
-	.id_table	= xeth_platform_device_ids,
 };

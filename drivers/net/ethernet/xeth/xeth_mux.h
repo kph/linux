@@ -16,6 +16,7 @@
 
 extern struct rtnl_link_ops xeth_mux_lnko;
 extern const struct net_device_ops xeth_mux_ndo;
+extern void xeth_mux_uninit(struct net_device *);
 
 static inline bool is_xeth_mux(struct net_device *nd)
 {

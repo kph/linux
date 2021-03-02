@@ -34,7 +34,7 @@ struct xeth_platform {
 	/**
 	 * @init: called before registering the mux and its ports.
 	 */
-	int (*init)(struct platform_device *);
+	int (*init)(struct platform_device *, u32);
 	/**
 	 * @uninit: called before unregistering mux and all of its uppers
 	 */
@@ -90,9 +90,10 @@ const struct xeth_platform *xeth_mux_platform(struct net_device *mux);
 struct net_device *xeth_mux(const struct xeth_platform *);
 
 static inline int xeth_platform_init(const struct xeth_platform *platform,
-				     struct platform_device *pd)
+				     struct platform_device *pd,
+				     u32 base_port)
 {
-	return (platform && platform->init) ?  platform->init(pd) : 32;
+	return (platform && platform->init) ?  platform->init(pd, base_port) : 32;
 }
 
 static inline void xeth_platform_uninit(const struct xeth_platform *platform)
