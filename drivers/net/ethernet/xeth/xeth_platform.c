@@ -24,11 +24,22 @@ enum xeth_platform_dd {
 };
 
 extern struct xeth_platform xeth_platina_mk1_platform;
-extern struct xeth_platform xeth_platina_mk1alpha_platform;
 
-static const struct xeth_platform * const xeth_platforms[] = {
-	[xeth_platform_dd_platina_mk1] = &xeth_platina_mk1_platform,
-	[xeth_platform_dd_platina_mk1alpha] = &xeth_platina_mk1alpha_platform,
+struct xeth_variant {
+	u32 base_port;
+};
+
+static const struct xeth_variant xeth_variant_platina_mk1 = {
+	.base_port = 1,
+};
+
+static const struct xeth_variant xeth_variant_platina_mk1alpha = {
+	.base_port = 0,
+};
+
+static const struct xeth_variant * const xeth_variants[] = {
+	[xeth_platform_dd_platina_mk1] = &xeth_variant_platina_mk1,
+	[xeth_platform_dd_platina_mk1alpha] = &xeth_variant_platina_mk1alpha,
 };
 
 static const struct platform_device_id xeth_platform_device_ids[] = {
@@ -48,11 +59,11 @@ MODULE_DEVICE_TABLE(platform, xeth_platform_device_ids);
 static const struct of_device_id xeth_platform_of_match[] = {
 	{
 		.compatible = "platina,mk1",
-		.data = &xeth_platina_mk1_platform,
+		.data = &xeth_variant_platina_mk1,
 	},
 	{
 		.compatible = "platina,mk1alpha",
-		.data = &xeth_platina_mk1alpha_platform,
+		.data = &xeth_variant_platina_mk1alpha,
 	},
 	{},
 };
@@ -92,9 +103,12 @@ static struct device_attribute xeth_platform_provision_attr = {
 
 static int __xeth_platform_probe(struct platform_device *pd)
 {
-	const struct xeth_platform *platform;
+	const struct xeth_variant *variant;
 	struct net_device *mux;
 	int err, port, subport;
+	u32 base_port;
+
+	variant = device_get_match_data(&pd->dev);
 
 	printk(KERN_EMERG "%s: pd=%px init_name=%s\n",
 	       __func__, pd, pd->dev.init_name);
@@ -108,48 +122,52 @@ static int __xeth_platform_probe(struct platform_device *pd)
 		       pd->name);
 		return -EINVAL;
 	}
-	platform = acpi_device_get_match_data(&pd->dev);
-	if (platform) {
-		printk(KERN_EMERG "%s: %s platform %px platform_mk1 %px alpha %px\n",
+	if (variant) {
+		printk(KERN_EMERG "%s: %s variant %px platform_mk1 %px alpha %px\n",
 		       __func__, pd->name,
-		       platform, &xeth_platina_mk1_platform,
-		       &xeth_platina_mk1alpha_platform);
-		//platform = NULL;
+		       variant, &xeth_variant_platina_mk1,
+		       &xeth_variant_platina_mk1alpha);
+		//variant = NULL;
 	}
 
-	if (!platform && pd->id_entry) {
-		platform = xeth_platforms[pd->id_entry->driver_data];
-		printk(KERN_EMERG "%s: %s pd->id_entry %ld platform %px platform_mk1 %px alpha %px\n",
-		       __func__, pd->name, pd->id_entry->driver_data, platform,
-		       &xeth_platina_mk1_platform,
-		       &xeth_platina_mk1alpha_platform);
+	if (!variant && pd->id_entry) {
+		variant = xeth_variants[pd->id_entry->driver_data];
+		printk(KERN_EMERG "%s: %s pd->id_entry %ld variant %px platform_mk1 %px alpha %px\n",
+		       __func__, pd->name, pd->id_entry->driver_data, variant,
+		       &xeth_variant_platina_mk1,
+		       &xeth_variant_platina_mk1alpha);
 	}
 
-	if (!platform) {
-		pr_err("%s: no match\n", pd->name);
+	if (!variant) {
+		pr_err("%s: no match %s\n", __func__, pd->name);
 		return -EINVAL;
+	}
+
+	if (device_property_read_u32(&pd->dev, "base-port", &base_port)) {
+		base_port = variant->base_port;
 	}
 
 	err = device_create_file(&pd->dev, &xeth_platform_provision_attr);
 	if (err)
 		return err;
 
-	err = xeth_platform_init(platform, pd);
+	err = xeth_platform_init(&xeth_platina_mk1_platform, pd, base_port);
 	if (err) {
 		device_remove_file(&pd->dev, &xeth_platform_provision_attr);
 		return err;
 	}
 
-	mux = xeth_mux(platform);
+	mux = xeth_mux(&xeth_platina_mk1_platform);
 	if (IS_ERR(mux)) {
-		xeth_platform_uninit(platform);
+		xeth_platform_uninit(&xeth_platina_mk1_platform);
 		device_remove_file(&pd->dev, &xeth_platform_provision_attr);
 		return PTR_ERR(mux);
 	}
 
 	platform_set_drvdata(pd, mux);
 
-	for (port = 0; port < xeth_platform_ports(platform); port++)
+	for (port = 0; port < xeth_platform_ports(&xeth_platina_mk1_platform);
+	     port++)
 		switch (xeth_platform_provision[port]) {
 		case 1:
 			xeth_port(mux, port, -1);
