@@ -45,11 +45,11 @@ MODULE_DEVICE_TABLE(platform, xeth_platform_device_ids);
 
 static const struct of_device_id xeth_platform_of_match[] = {
 	{
-		.compatible = "linux,platina-mk1",
+		.compatible = "platina,mk1",
 		.data = &xeth_platina_mk1_platform,
 	},
 	{
-		.compatible = "linux,platina-mk1alpha",
+		.compatible = "platina,mk1alpha",
 		.data = &xeth_platina_mk1alpha_platform,
 	},
 	{},
