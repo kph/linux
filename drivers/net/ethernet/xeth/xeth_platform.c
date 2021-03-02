@@ -13,7 +13,7 @@
 #include "xeth_qsfp.h"
 #include <linux/module.h>
 #include <linux/mod_devicetable.h>
-#include <linux/of_device.h>
+#include <linux/property.h>
 
 /* Driver Data indices */
 enum xeth_platform_dd {
@@ -94,7 +94,7 @@ static int xeth_platform_probe(struct platform_device *pd)
 	struct net_device *mux;
 	int err, port, subport;
 
-	platform = of_device_get_match_data(&pd->dev);
+	platform = device_get_match_data(&pd->dev);
 	if (!platform && pd->id_entry)
 		platform = xeth_platforms[pd->id_entry->driver_data];
 	if (!platform) {
