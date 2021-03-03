@@ -13,7 +13,9 @@
 #include "xeth_qsfp.h"
 #include <linux/module.h>
 #include <linux/mod_devicetable.h>
-#include <linux/property.h>
+//#include <linux/property.h>
+//#include <linux/of_device.h>
+#include <linux/acpi.h>
 
 /* Driver Data indices */
 enum xeth_platform_dd {
@@ -88,15 +90,41 @@ static struct device_attribute xeth_platform_provision_attr = {
 	.show = xeth_platform_show_port_provision,
 };
 
-static int xeth_platform_probe(struct platform_device *pd)
+static int __xeth_platform_probe(struct platform_device *pd)
 {
 	const struct xeth_platform *platform;
 	struct net_device *mux;
 	int err, port, subport;
 
-	platform = device_get_match_data(&pd->dev);
-	if (!platform && pd->id_entry)
+	printk(KERN_EMERG "%s: pd=%px init_name=%s\n",
+	       __func__, pd, pd->dev.init_name);
+
+//	platform = of_device_get_match_data(&pd->dev);
+	if (device_property_match_string(&pd->dev, "compatible", "platina,mk1")) {
+		printk(KERN_EMERG "%s: pd->name %s is compatible\n", __func__,
+		       pd->name);
+	} else {
+		printk(KERN_EMERG "%s: pd->name %s is not compatible\n", __func__,
+		       pd->name);
+		return -EINVAL;
+	}
+	platform = acpi_device_get_match_data(&pd->dev);
+	if (platform) {
+		printk(KERN_EMERG "%s: %s platform %px platform_mk1 %px alpha %px\n",
+		       __func__, pd->name,
+		       platform, &xeth_platina_mk1_platform,
+		       &xeth_platina_mk1alpha_platform);
+		//platform = NULL;
+	}
+
+	if (!platform && pd->id_entry) {
 		platform = xeth_platforms[pd->id_entry->driver_data];
+		printk(KERN_EMERG "%s: %s pd->id_entry %ld platform %px platform_mk1 %px alpha %px\n",
+		       __func__, pd->name, pd->id_entry->driver_data, platform,
+		       &xeth_platina_mk1_platform,
+		       &xeth_platina_mk1alpha_platform);
+	}
+
 	if (!platform) {
 		pr_err("%s: no match\n", pd->name);
 		return -EINVAL;
@@ -139,6 +167,15 @@ static int xeth_platform_probe(struct platform_device *pd)
 		}
 
 	return 0;
+}
+
+static int xeth_platform_probe(struct platform_device *pd) {
+	int err;
+
+	err = __xeth_platform_probe(pd);
+	printk(KERN_EMERG"%s: pd=%px pd->name=%s err=%d\n", __func__,
+	       pd, pd->name, err);
+	return err;
 }
 
 static int xeth_platform_remove(struct platform_device *pd)
