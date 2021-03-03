@@ -120,23 +120,24 @@ static int __xeth_platform_probe(struct platform_device *pd)
 		base_port = variant->base_port;
 	}
 
-	err = device_create_file(&pd->dev, &xeth_platform_provision_attr);
-	if (err)
-		return err;
-
 	err = xeth_platform_init(&xeth_platina_mk1_platform, pd, base_port);
 	if (err) {
-		device_remove_file(&pd->dev, &xeth_platform_provision_attr);
 		return err;
 	}
 
 	mux = xeth_mux(&xeth_platina_mk1_platform);
 	if (IS_ERR(mux)) {
 		xeth_platform_uninit(&xeth_platina_mk1_platform);
-		device_remove_file(&pd->dev, &xeth_platform_provision_attr);
 		return PTR_ERR(mux);
 	}
 
+	err = device_create_file(&pd->dev, &xeth_platform_provision_attr);
+	if (err) {
+		xeth_mux_uninit(mux);
+		xeth_platform_uninit(&xeth_platina_mk1_platform);
+		return err;
+	}
+	
 	platform_set_drvdata(pd, mux);
 
 	for (port = 0; port < xeth_platform_ports(&xeth_platina_mk1_platform);

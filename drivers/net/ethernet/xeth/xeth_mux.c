@@ -739,7 +739,7 @@ xeth_mux_main_exit:
 	return err;
 }
 
-static void xeth_mux_uninit(struct net_device *mux)
+void xeth_mux_uninit(struct net_device *mux)
 {
 	struct xeth_mux_priv *priv = netdev_priv(mux);
 	struct net_device *lower;
