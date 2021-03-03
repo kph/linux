@@ -543,7 +543,7 @@ static void onie_new_client(struct platform_device *provider)
 
 static int onie_probe(struct platform_device *provider)
 {
-	static const bool onie_with_client = true;
+	static const bool onie_with_client = false;
 	struct onie_priv *priv = onie_new_priv(provider);
 	int err = !priv ? -ENOMEM : 0;
 	if (err >= 0)
