@@ -708,7 +708,6 @@ static ssize_t onie_store_mac_base(struct device *dev,
 }
 
 static ssize_t onie_store_num_macs(struct device *dev,
-				   stru*sh
 				   struct device_attribute *attr,
 				   const char *buf, size_t sz)
 {
