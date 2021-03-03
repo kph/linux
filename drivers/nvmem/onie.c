@@ -518,32 +518,8 @@ static const char *onie_vendor_name(struct onie_priv *priv)
 	return NULL;
 }
 
-static void onie_new_client(struct platform_device *provider)
-{
-	struct onie_priv *priv = platform_get_drvdata(provider);
-	const char *name = onie_vendor_name(priv);
-	int err;
-
-	if (!name)
-		return;
-	strlcpy(priv->client.name, name, sizeof(priv->client.name));
-	priv->client.info.name = priv->client.name;
-	priv->client.info.id = -1;
-	priv->client.info.res = NULL;
-	priv->client.info.num_res = 0;
-	priv->client.info.parent = NULL;
-	priv->client.pdev = platform_device_register_full(&priv->client.info);
-	if (IS_ERR(priv->client.pdev)) {
-		err = PTR_ERR(priv->client.pdev);
-		priv->client.pdev = NULL;
-		pr_err("%s(%s):register(%s):  %d\n", __func__, name,
-		       priv->client.info.name, err);
-	}
-}
-
 static int onie_probe(struct platform_device *provider)
 {
-	static const bool onie_with_client = true;
 	struct onie_priv *priv = onie_new_priv(provider);
 	int err = !priv ? -ENOMEM : 0;
 	if (err >= 0)
@@ -554,8 +530,6 @@ static int onie_probe(struct platform_device *provider)
 		err = onie_cache_validate(priv->cache.data);
 	if (err >= 0)
 		err = devm_device_add_groups(&provider->dev, onie_attr_groups);
-	if (err >= 0 && onie_with_client)
-		onie_new_client(provider);
 	return err;
 }
 
