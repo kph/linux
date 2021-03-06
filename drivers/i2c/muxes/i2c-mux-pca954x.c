@@ -408,7 +408,6 @@ static int pca954x_probe(struct i2c_client *client,
 {
 	struct i2c_adapter *adap = client->adapter;
 	struct device *dev = &client->dev;
-	struct device_node *np = dev->of_node;
 	bool idle_disconnect_dt;
 	struct gpio_desc *gpio;
 	struct i2c_mux_core *muxc;
@@ -472,8 +471,7 @@ static int pca954x_probe(struct i2c_client *client,
 	data->last_chan = 0;		   /* force the first selection */
 	data->idle_state = MUX_IDLE_AS_IS;
 
-	idle_disconnect_dt = np &&
-		of_property_read_bool(np, "i2c-mux-idle-disconnect");
+	idle_disconnect_dt = device_property_read_bool(dev, "i2c-mux-idle-disconnect");
 	if (idle_disconnect_dt)
 		data->idle_state = MUX_IDLE_DISCONNECT;
 
