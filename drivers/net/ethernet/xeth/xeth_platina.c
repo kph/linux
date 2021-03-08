@@ -107,8 +107,10 @@ static void xeth_platina_mk1_uninit(void)
 	if (!xeth_platina_mk1.qsfps)
 		return;
 	for (port = 0; port < xeth_platina_mk1_ports; port++)
-		if (xeth_platina_mk1.qsfps[port])
+		if (xeth_platina_mk1.qsfps[port]) {
 			i2c_unregister_device(xeth_platina_mk1.qsfps[port]);
+			xeth_platina_mk1.qsfps[port] = NULL;
+		}
 	return;
 }
 
