@@ -58,8 +58,8 @@ static int xeth_platina_mk1_init(struct platform_device *pd, u32 base_port)
 
 	if (!xeth_platina_mk1.qsfps) {
 		xeth_platina_mk1.qsfps =
-			devm_kcalloc(&pd->dev, xeth_platina_mk1_ports,
-				     sizeof(struct i2c_client*), GFP_KERNEL);
+			kcalloc(xeth_platina_mk1_ports,
+				sizeof(struct i2c_client*), GFP_KERNEL);
 		if (!xeth_platina_mk1.qsfps) {
 			xeth_port_et_stat_uninit(&xeth_platina_mk1.st);
 			return -ENOMEM;
@@ -111,6 +111,9 @@ static void xeth_platina_mk1_uninit(void)
 			i2c_unregister_device(xeth_platina_mk1.qsfps[port]);
 			xeth_platina_mk1.qsfps[port] = NULL;
 		}
+	kfree(xeth_platina_mk1.qsfps);
+	xeth_platina_mk1.qsfps = NULL;
+	
 	return;
 }
 
