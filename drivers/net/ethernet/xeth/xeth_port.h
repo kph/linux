@@ -111,11 +111,11 @@ xeth_port_et_stat_store_name(struct device *dev, struct device_attribute *attr,
 	begin = st->named * ETH_GSTRING_LEN;
 	end = begin + ETH_GSTRING_LEN;
 	for (i = begin; i < end; i++)
-		if (buf[i] == '\n' || i == sz) {
+		if (buf[i-begin] == '\n' || (i-begin) == sz) {
 			st->names[i] = '\0';
 			break;
 		} else
-			st->names[i] = buf[i];
+			st->names[i] = buf[i-begin];
 	st->named++;
 	xeth_port_et_stat_unlock(st);
 	return sz;
