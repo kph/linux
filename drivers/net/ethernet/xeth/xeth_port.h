@@ -133,7 +133,7 @@ static inline int xeth_port_et_stat_init(struct xeth_port_et_stat *st,
 	st->attr.attr.mode = VERIFY_OCTAL_PERMISSIONS(0644);
 	st->attr.show = xeth_port_et_stat_show_name;
 	st->attr.store = xeth_port_et_stat_store_name;
-	st->names = devm_kzalloc(dev, ETH_GSTRING_LEN * st->max, GFP_KERNEL);
+	st->names = kzalloc(ETH_GSTRING_LEN * st->max, GFP_KERNEL);
 	if (!st->names)
 		return -ENOMEM;
 	err = device_create_file(dev, &st->attr);
@@ -147,6 +147,10 @@ static inline void xeth_port_et_stat_uninit(struct xeth_port_et_stat *st)
 	if (st->dev) {
 		device_remove_file(st->dev, &st->attr);
 		st->dev = NULL;
+	}
+	if (st->names) {
+		kfree(st->names);
+		st->names = NULL;
 	}
 }
 
