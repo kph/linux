@@ -76,7 +76,7 @@ static int xeth_platform_probe(struct platform_device *pd)
 {
 	struct net_device *mux;
 	int err, port, subport, index;
-	u32 base_port = 1, link_count;
+	u32 base_port = 1, link_count, onie_i2c_addr;
 	struct gpio_descs *absent_gpios, *int_gpios, *lpmode_gpios, *reset_gpios;
 	struct fwnode_reference_args args;
 
@@ -132,6 +132,16 @@ static int xeth_platform_probe(struct platform_device *pd)
 		fwnode_handle_put(args.fwnode);
 	}
 
+	err = device_property_read_u32(&pd->dev, "onie-i2c-addr",
+				       &onie_i2c_addr);
+	if (err < 0) {
+		printk(KERN_EMERG "%s: onie-i2c-addr property missing\n",
+		       __func__);
+		goto out_onie_i2c_addr;
+	}
+	printk(KERN_EMERG "%s: onie-i2c-addr is %02x\n", __func__,
+	       onie_i2c_addr);
+
 	err = xeth_platform_init(&xeth_platina_mk1_platform, pd, base_port);
 	if (err) {
 		goto out_platform_init;
@@ -180,6 +190,7 @@ out_device_create_file:
 out_mux:
 	xeth_platform_uninit(&xeth_platina_mk1_platform);
 out_platform_init:
+out_onie_i2c_addr:	
 out_link_count:	
 	gpiod_put_array(reset_gpios);
 out_reset:
