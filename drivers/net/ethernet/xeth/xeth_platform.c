@@ -75,10 +75,11 @@ static void gpiod_debug(const char *label, struct gpio_descs *descs)
 static int xeth_platform_probe(struct platform_device *pd)
 {
 	struct net_device *mux;
-	int err, port, subport;
-	u32 base_port = 1;
+	int err, port, subport, index;
+	u32 base_port = 1, link_count;
 	struct gpio_descs *absent_gpios, *int_gpios, *lpmode_gpios, *reset_gpios;
-	
+	struct fwnode_reference_args args;
+
 	err = device_property_read_u32(&pd->dev, "base-port", &base_port);
 	if (err < 0)
 		return err;
@@ -105,6 +106,30 @@ static int xeth_platform_probe(struct platform_device *pd)
 	if (IS_ERR(reset_gpios)) {
 		err = PTR_ERR(reset_gpios);
 		goto out_reset;
+	}
+
+	err = device_property_read_u32(&pd->dev, "link-count", &link_count);
+	if (err < 0) {
+		printk(KERN_EMERG "%s: link-count property missing\n",
+		       __func__);
+		goto out_link_count;
+	}
+
+	for (index = 0; index < link_count; index++) {
+		struct acpi_device *adev;
+		err = fwnode_property_get_reference_args(dev_fwnode(&pd->dev),
+							 "links", NULL,
+							 0, index, &args);
+		if (err < 0) {
+			printk(KERN_EMERG "%s: links property missing index %d\n",
+			       __func__, index);
+			goto out_link_count;
+		}
+		adev = to_acpi_device_node(args.fwnode);
+		printk(KERN_EMERG "%s: links index %d is %s %s\n",
+		       __func__, index, dev_name(&adev->dev),
+		       dev_name(acpi_get_first_physical_node(adev)));
+		fwnode_handle_put(args.fwnode);
 	}
 
 	err = xeth_platform_init(&xeth_platina_mk1_platform, pd, base_port);
@@ -155,6 +180,7 @@ out_device_create_file:
 out_mux:
 	xeth_platform_uninit(&xeth_platina_mk1_platform);
 out_platform_init:
+out_link_count:	
 	gpiod_put_array(reset_gpios);
 out_reset:
 	gpiod_put_array(lpmode_gpios);
