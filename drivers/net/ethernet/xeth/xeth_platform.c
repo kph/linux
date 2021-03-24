@@ -79,7 +79,8 @@ static int xeth_platform_probe(struct platform_device *pd)
 	u32 base_port = 1, link_count, onie_i2c_addr;
 	struct gpio_descs *absent_gpios, *int_gpios, *lpmode_gpios, *reset_gpios;
 	struct fwnode_reference_args args;
-
+	struct net_device *dev;
+	
 	err = device_property_read_u32(&pd->dev, "base-port", &base_port);
 	if (err < 0)
 		return err;
@@ -115,8 +116,15 @@ static int xeth_platform_probe(struct platform_device *pd)
 		goto out_link_count;
 	}
 
+	for_each_netdev(&init_net, dev) {
+		printk(KERN_EMERG "%s: for_each_netdev dev %s %s %s\n",
+		       __func__, dev->name, dev_name(&dev->dev),
+		       dev->dev.parent ? dev_name(dev->dev.parent) : "");
+	}
+
 	for (index = 0; index < link_count; index++) {
 		struct acpi_device *adev;
+		struct device *pdev;
 		err = fwnode_property_get_reference_args(dev_fwnode(&pd->dev),
 							 "links", NULL,
 							 0, index, &args);
@@ -126,10 +134,18 @@ static int xeth_platform_probe(struct platform_device *pd)
 			goto out_link_count;
 		}
 		adev = to_acpi_device_node(args.fwnode);
+		pdev = acpi_get_first_physical_node(adev);
 		printk(KERN_EMERG "%s: links index %d is %s %s\n",
 		       __func__, index, dev_name(&adev->dev),
 		       dev_name(acpi_get_first_physical_node(adev)));
+		for_each_netdev(&init_net, dev) {
+			if (dev->dev.parent && dev->dev.parent == pdev) {
+				printk(KERN_EMERG "%s: links found match %s\n",
+				       __func__, dev->name);
+			}
+		}
 		fwnode_handle_put(args.fwnode);
+
 	}
 
 	err = device_property_read_u32(&pd->dev, "onie-i2c-addr",
