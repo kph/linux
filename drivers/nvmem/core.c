@@ -999,7 +999,7 @@ static void __nvmem_device_put(struct nvmem_device *nvmem)
  */
 struct nvmem_device *fwnode_nvmem_device_get(struct fwnode_handle *fwnode, const char *id)
 {
-	struct device_node *nvmem_np;
+	struct fwnode_handle *nvmem_fwnode;
 	struct nvmem_device *nvmem;
 	int index = 0;
 
@@ -1024,8 +1024,8 @@ struct nvmem_device *fwnode_nvmem_device_get(struct fwnode_handle *fwnode, const
 		return ERR_PTR(-ENXIO);
 	}
 
-	nvmem = __nvmem_device_get(nvmem_np, device_match_fwnode);
-	fwnode_handle_put(nvmem_np);
+	nvmem = __nvmem_device_get(nvmem_fwnode, device_match_fwnode);
+	fwnode_handle_put(nvmem_fwnode);
 	return nvmem;
 }
 EXPORT_SYMBOL_GPL(fwnode_nvmem_device_get);
@@ -1217,7 +1217,7 @@ nvmem_find_cell_by_fwnode(struct nvmem_device *nvmem, struct fwnode_handle *fwno
  * nvmem_cell_put().
  */
 struct nvmem_cell *fwnode_nvmem_cell_get(struct fwnode_handle *fwnode,
-					    const char *id)
+					 const char *id)
 {
 	struct fwnode_handle *nvmem_fwnode, *cell_fwnode;
 	struct nvmem_device *nvmem;
@@ -1243,7 +1243,7 @@ struct nvmem_cell *fwnode_nvmem_cell_get(struct fwnode_handle *fwnode,
 		int rval;
 		
 		rval = acpi_node_get_property_reference(fwnode,
-						       "nvmem-cells", index, &args);
+							"nvmem-cells", index, &args);
 		if (rval) {
 			return ERR_PTR(rval);
 		}
@@ -1257,10 +1257,10 @@ struct nvmem_cell *fwnode_nvmem_cell_get(struct fwnode_handle *fwnode,
 	}
 
 	nvmem_fwnode = fwnode_get_next_parent(cell_fwnode);
-	if (!nvmem_fwnode) {
+	if (!nvmem_fwnode)
 		return ERR_PTR(-EINVAL);
 
-	nvmem = __nvmem_device_get(nvmem_np, device_match_fwnode);
+	nvmem = __nvmem_device_get(nvmem_fwnode, device_match_fwnode);
 	fwnode_handle_put(nvmem_fwnode);
 	if (IS_ERR(nvmem)) {
 		return ERR_CAST(nvmem);
