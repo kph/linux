@@ -687,7 +687,8 @@ static int nvmem_add_cells_from_fw(struct nvmem_device *nvmem)
 		if (rval < 0)
 			continue;
 		if (rval < 2 * sizeof(u32)) {
-			dev_err(dev, "nvmem: invalid reg on %pfw\n", child);
+			dev_err(dev, "nvmem: invalid reg %d on %pfw\n",
+				rval, child);
 			return -EINVAL;
 		}
 		rval = fwnode_property_read_u32_array(child, "reg", vals, 2);
