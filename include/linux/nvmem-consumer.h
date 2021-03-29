@@ -12,6 +12,7 @@
 #include <linux/err.h>
 #include <linux/errno.h>
 #include <linux/notifier.h>
+#include <linux/of.h>
 
 struct device;
 struct device_node;
@@ -240,4 +241,10 @@ static inline struct nvmem_device *fwnode_nvmem_device_get(struct fwnode_handle 
 
 #endif /* CONFIG_NVMEM */
  
+static inline struct nvmem_device *of_nvmem_device_get(struct device_node *np,
+						       const char *name)
+{
+	return np ? fwnode_nvmem_device_get(&np->fwnode, name) : NULL;
+}
+
 #endif  /* ifndef _LINUX_NVMEM_CONSUMER_H */
