@@ -1,6 +1,6 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/arm 5.4.74 Kernel Configuration
+# Linux/arm 5.4.111 Kernel Configuration
 #
 
 #
@@ -2012,6 +2012,7 @@ CONFIG_RTC_LIB=y
 
 # CONFIG_AUXDISPLAY is not set
 # CONFIG_UIO is not set
+# CONFIG_VFIO is not set
 # CONFIG_VIRT_DRIVERS is not set
 CONFIG_VIRTIO_MENU=y
 # CONFIG_VIRTIO_MMIO is not set
@@ -2027,7 +2028,6 @@ CONFIG_VIRTIO_MENU=y
 # CONFIG_MFD_CROS_EC is not set
 # CONFIG_CHROME_PLATFORMS is not set
 # CONFIG_MELLANOX_PLATFORM is not set
-CONFIG_ONIE_VENDORS=y
 CONFIG_CLKDEV_LOOKUP=y
 CONFIG_HAVE_CLK_PREPARE=y
 CONFIG_COMMON_CLK=y
@@ -2186,7 +2186,6 @@ CONFIG_NVMEM_SYSFS=y
 # CONFIG_NVMEM_IMX_IIM is not set
 CONFIG_NVMEM_IMX_OCOTP=y
 # CONFIG_NVMEM_SNVS_LPGPR is not set
-CONFIG_NVMEM_ONIE=y
 
 #
 # HW tracing support
